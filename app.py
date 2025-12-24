@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+import plotly.graph_objects as go
 
 # --- 1. Load the Trained Model ---
 # (Ensure 'glaucoma_model_final.pkl' and 'model_features.pkl' are in the same folder)
@@ -55,6 +56,66 @@ input_data['Family History'] = 1 if family_hist == "Yes" else 0
 
 # Convert to DataFrame
 df_input = pd.DataFrame([input_data])
+# --- 5. Visualization Functions ---
+# Radar Chart for Patient Profile
+def plot_radar_chart(input_data):
+    # Normalize values to 0-1 scale for the chart (approximate max values)
+    # IOP max ~30, CDR max 1.0, RNFL max 120 (inverted because lower is bad)
+    
+    categories = ['IOP', 'Cup-to-Disc Ratio', 'Nerve Damage (RNFL)', 'Visual Field Loss']
+    
+    # Invert RNFL and VF because Lower = Bad, but we want Bad = Outside of chart
+    rnfl_score = (120 - input_data['OCT_RNFL_Thickness']) / 120
+    vf_score = (1.0 - input_data['VF_Sensitivity']) 
+    
+    values = [
+        input_data['Intraocular Pressure (IOP)'] / 30,  # Normalized IOP
+        input_data['Cup-to-Disc Ratio (CDR)'],          # Already 0-1
+        rnfl_score,
+        vf_score
+    ]
+    
+    # Close the loop for the chart
+    values += values[:1]
+    categories += categories[:1]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatterpolar(
+        r=values,
+        theta=categories,
+        fill='toself',
+        name='Patient Profile',
+        line_color='red'
+    ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0, 1]
+            )),
+        showlegend=False,
+        title="Patient Clinical Risk Profile"
+    )
+    return fig
+
+
+# Function to determine likely glaucoma subtype based on clinical rules (['Primary Open-Angle Glaucoma', 'Juvenile Glaucoma', 'Congenital Glaucoma','Normal-Tension Glaucoma','Angle-Closure Glaucoma', 'Secondary Glaucoma'])
+def determine_subtype(row):
+    if row['Intraocular Pressure (IOP)'] > 21 and row['OCT_RNFL_Thickness'] < 80:
+        return "Primary Open-Angle Glaucoma"
+    elif row['Intraocular Pressure (IOP)'] <= 21 and row['OCT_RNFL_Thickness'] < 80:
+        return "Normal-Tension Glaucoma"
+    elif row['Intraocular Pressure (IOP)'] > 21 and row['OCT_RNFL_Thickness'] >= 80:
+        return "Ocular Hypertension"
+    elif row['Age'] < 40 and row['Intraocular Pressure (IOP)'] > 21:
+        return "Juvenile Glaucoma"
+    elif row['Age'] < 5:
+        return "Congenital Glaucoma"
+    elif row['Intraocular Pressure (IOP)'] > 30:
+        return "Angle-Closure Glaucoma"
+    else:
+        return "Other/Unspecified"
 
 # --- 5. Prediction ---
 if st.button("Analyze Patient Data"):
@@ -69,6 +130,8 @@ if st.button("Analyze Patient Data"):
         st.subheader("Diagnostic Result")
         if prediction == 1:
             st.error("⚠️ **POSITIVE FOR GLAUCOMA**")
+            subtype = determine_subtype(df_input.iloc[0])
+            st.warning(f"⚠️ Likely Subtype: **{subtype}**")
         else:
             st.success("✅ **NEGATIVE (Healthy)**")
             
@@ -85,3 +148,16 @@ if st.button("Analyze Patient Data"):
     
     *High probability is driven by IOP > 21 and/or RNFL < 80.*
     """)
+    # Visualization
+    st.subheader("Patient Metrics Visualization")
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=['IOP', 'CDR', 'RNFL Thickness', 'VF Sensitivity'],
+        y=[iop, cdr, rnfl, vf_sens],
+        marker_color=['indianred', 'lightsalmon', 'lightseagreen', 'lightblue']
+    ))
+    fig.update_layout(title="Patient Metrics Overview", yaxis_title="Value")
+    st.plotly_chart(fig)
+    st.markdown("----")
+
+    st.plotly_chart(plot_radar_chart(input_data))
