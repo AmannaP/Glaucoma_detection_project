@@ -4,11 +4,10 @@ plotly
 streamlit
 pandas
 numpy
-joblib
+joblib==1.3.2
 plotly
-scikit-learn
-xgboost
-
+scikit-learn==1.3.2
+xgboost==1.7.6
 
 # This file lists the required Python packages for the glaucoma detection app.py.
 # Note: Ensure the versions are compatible with your existing environment.
