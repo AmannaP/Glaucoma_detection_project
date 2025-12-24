@@ -1,12 +1,14 @@
-streamlit==1.31.0
-pandas==2.2.0
-numpy==1.26.3
-scikit-learn==1.4.0
-xgboost==2.0.3
+matplotlib
+seaborn
+plotly
+streamlit
+pandas
+numpy
 joblib
-matplotlib==3.8.2
-seaborn==0.13.1
-plotly==5.18.0
+plotly
+scikit-learn
+xgboost
+
 
 # This file lists the required Python packages for the glaucoma detection app.py.
 # Note: Ensure the versions are compatible with your existing environment.

@@ -3,6 +3,7 @@ import pandas as pd
 import joblib
 import numpy as np
 import plotly.graph_objects as go
+import os
 
 # --- 1. Streamlit Page Config (MUST BE FIRST) ---
 st.set_page_config(page_title="Glaucoma Diagnostic Assistant", page_icon="👁️")
